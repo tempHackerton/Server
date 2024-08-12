@@ -44,7 +44,8 @@ jobs:
       # 배포 패키지 생성
       - name: Generate deployment package
         run: |
-          cp -R src/csv dist/src/csv
+          mkdir -p dist/src
+          cp -R src/csv dist/src
           cp -R .platform dist
           cp package.json dist/package.json
           cp package-lock.json dist/package-lock.json
