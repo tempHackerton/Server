@@ -41,15 +41,14 @@ export const selfIntroduceCall = async (scriptText) => {
         
         const generatedText = response.data.choices[0].message.content.trim();
 
-        // 이스케이프 문자 제거
-        const cleanString = generatedText.replace(/\\"/g, '"');
-        
-        // JSON으로 변환
-        const parsedJSON = JSON.parse(cleanString);
-        
+        // 이스케이프 문자 제거 및 JSON으로 변환
+        const sanitizedString = generatedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // 제어 문자 제거
+        const parsedJSON = JSON.parse(sanitizedString); // JSON 파싱
+
         console.log("gpt data", parsedJSON);
-        return await selfIntroduceResponseDTO(parsedJSON,parsedJSON.result.length);
+        return await selfIntroduceResponseDTO(parsedJSON, parsedJSON.result.length);
     } catch (error) {
+        console.error('request Data',)
         console.error('Error calling ChatGPT API:', error);
         throw error;
     }
