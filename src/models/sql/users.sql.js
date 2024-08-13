@@ -6,7 +6,7 @@
  * SQL that insert user data
  */
 export const saveUserSql =
-	"INSERT INTO user(name, email, password, birth, gender, is_married, child_count) VALUES(?, ?, ?, ?, ?, ?, ?);";
+	"INSERT INTO user(name, email, password, birth, gender, is_married, child_count,phone_number) VALUES(?, ?, ?, ?, ?, ?, ?,?);";
 
 /**
  * SQL that find id & password by email
