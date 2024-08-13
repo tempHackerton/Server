@@ -25,3 +25,15 @@ export const recommandPoliciesResponseDTO = async (req)=>{
         "description": req.description
     }
 }
+
+export const interviewResponseDTO = async (req)=>{
+    return {
+        "answer":req.answer
+    }
+}
+export const interviewResultResponseDTO = async(req)=>{
+    return {
+        "good": req.good,
+        "bad": req.bad
+    }
+}
