@@ -5,10 +5,13 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import cheerio from 'cheerio';
 import { interviewRequestDTO, interviewResponseDTO, interviewResultResponseDTO, recommandPoliciesResponseDTO, recommandsPoliciesResponseDTO, selfIntroduceResponseDTO } from "../dtos/gpt.dtos";
+import { create } from "domain";
 dotenv.config();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL ='https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = process.env.OPENAI_MODEL;
+
 const parseCSV = (filePath) => {
     return new Promise((resolve, reject) => {
         const policies = [];
@@ -91,53 +94,37 @@ const fixJSONResponse = (responseText) => {
     return jsonPart;
   };
 export const recommandPoliciesService= async(data)=>{
-    const csvFilePath ='./src/csv/yongin.csv';
+    // const csvFilePath ='./src/csv/yongin.csv';
     try {
-        const policies=await parseCSV(csvFilePath);
+        const openai = new OpenAI({
+            apiKey:OPENAI_API_KEY
+        })
 
-        const system_prompt = `You should recommend policies according to the information given. The list of policies is as follows:
-Policy: ${JSON.stringify(policies)}
+        const assistant = await openai.beta.assistants.retrieve(
+            OPENAI_MODEL
+        );
 
-The user will provide information in the following format:
-{
-  "birthdate": "YYYY-MM-DD",
-  "residence": "City or Area of Residence",
-  "is_married": "true/false",
-  "child_count": "number of children"
-}
+        const thread = await openai.beta.threads.create();
 
-You should respond with a list of relevant policies in the following  only JSON data in korean:
-{
-  "policies": [
-    {
-      "name": "Policy name",
-      "type": "Policy type",
-      "startTime": "Start period",
-      "endTime": "End period",
-      "target": "Target group",
-      "description": "Description of policy"
-    }
-  ]
-}`;
         
         const prompt =JSON.stringify(data);
-        const response = await axios.post(
-            OPENAI_API_URL,
-            {
-                model: "gpt-3.5-turbo-16k",
-                messages: [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ]
-            },
-            {
-                headers: {  
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
-                }
-            });
-            const generatedText = response.data.choices[0].message.content.trim();
-            console.log(generatedText)
+
+        await openai.beta.threads.messages.create(thread.id,{
+            role:"user",
+            content: prompt
+        });
+
+        const run = await openai.beta.threads.runs.create(thread.id, {
+            assistant_id: assistant.id,
+            instructions: "",
+        });
+
+        await checkRunStatus(openai,thread.id,run.id);
+
+        const message = await openai.beta.threads.messages.list(thread.id);
+
+        const generatedText = message.body.data[0].content[0].text.value;//GPTs가 제공한 내용
+       
         // 이스케이프 문자 제거 및 JSON으로 변환
         const sanitizedString = generatedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // 제어 문자 제거
         const fixedJSON = fixJSONResponse(sanitizedString);
@@ -150,12 +137,18 @@ You should respond with a list of relevant policies in the following  only JSON 
         return await recommandsPoliciesResponseDTO(policiesData);
 
     } catch (error) {
-        console.error('request Data',)
-        console.error('Error calling ChatGPT API:', error);
+        console.error('Error:', error.response ? error.response.data : error.message);
         throw error;
     }
 
+    async function checkRunStatus(client, threadId, runId) {
+        let run = await client.beta.threads.runs.retrieve(threadId, runId);
     
+        while (run.status !== "completed") {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+            run = await client.beta.threads.runs.retrieve(threadId, runId);
+        }
+    }
 
 }
 const fetchQuestions = async (url) => {
