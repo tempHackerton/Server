@@ -24,6 +24,7 @@ export const saveUser = async (req) => {
             req.gender,
 			req.is_married,
             req.child_count,
+            req.phone_number
 		]);
 
 		return null;

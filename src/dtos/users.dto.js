@@ -11,6 +11,7 @@ export const signupRequestDTO = (req) => {
 		gender: req.gender,
 		is_married: req.is_married,
 		child_count: req.child_count,
+		phone_number: req.phone_number,
 	};
 };
 
