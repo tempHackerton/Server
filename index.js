@@ -14,7 +14,9 @@ import { healthRoute } from './src/routes/health.route.js';
 import session from 'express-session';
 import { gptRoute } from './src/routes/gpt.route.js';
 
-
+import { scheduleJob } from 'node-schedule';
+import { collectPolicies } from './src/services/policies.js';
+import { policesRouter } from './src/routes/policies.route.js';
 
 
 
@@ -36,7 +38,7 @@ app.use('/health', healthRoute);
 
 app.use('/gpt',gptRoute)
 
-
+app.use('/policies',policesRouter);
 
 app.get('/', (req, res) => {
     res.status(200).json({ status: 200, success: true, message: '루트 페이지!' });
@@ -61,5 +63,10 @@ app.use((err, req, res, next) => {
 
 app.listen(app.get('port'), () => {
     console.log(`Example app listening on port ${app.get('port')}`);
+    //매주 월요일마다 크롤링 작업 시작
+    scheduleJob('* * * * * 1',function(){
+        //정책 크롤링 함수, 
+        collectPolicies();
+    })
 });
 
