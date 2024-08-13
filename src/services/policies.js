@@ -1,4 +1,10 @@
 import { getAlarmDao, getPoliciesDao, isNewDataDao, readAlarmDao, sendAlarmDao } from "../models/dao/policies.dao";
+import dotenv from 'dotenv';
+
+
+dotenv.config();
+
+const OPENAI_MODEL_RECOMMEND = process.env.OPENAI_MODEL_RECOMMEND
 
 export const collectPolicies= async()=>{
     //매주 월요일 정책 사이트를 뒤져 크롤링한다.
@@ -6,14 +12,62 @@ export const collectPolicies= async()=>{
     //크롤링한 데이터를 검사하면서 기존 데이터인지 신 데이터인지 확인한다.
     for(let i =0; i< data.length;i++){
         if(isNewData(data[i])){
-
-            sendAlarmService(data[i]);
+            const users = pickUser(data[i]);
+            for(let j =0; i<users.length;i++)
+                sendAlarmService(data[i],users[j]);
         }else{
             break;
         }
     }
 }
 
+
+async function pickUser(data) {
+    try {
+        const openai = new OpenAI({
+            apiKey:OPENAI_API_KEY
+        })
+
+        const assistant = await openai.beta.assistants.retrieve(
+            OPENAI_MODEL_RECOMMEND
+        );
+
+        const thread = await openai.beta.threads.create();
+
+        
+        const prompt =JSON.stringify(data);
+
+        await openai.beta.threads.messages.create(thread.id,{
+            role:"user",
+            content: prompt
+        });
+
+        const run = await openai.beta.threads.runs.create(thread.id, {
+            assistant_id: assistant.id,
+            instructions: "",
+        });
+
+        await checkRunStatus(openai,thread.id,run.id);
+
+        const message = await openai.beta.threads.messages.list(thread.id);
+
+        const generatedText = message.body.data[0].content[0].text.value;//GPTs가 제공한 내용
+       
+        // 이스케이프 문자 제거 및 JSON으로 변환
+        const sanitizedString = generatedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // 제어 문자 제거
+        const fixedJSON = fixJSONResponse(sanitizedString);
+        const parsedJSON = JSON.parse(fixedJSON); // JSON 파싱
+    
+        
+        console.log("gpt data", parsedJSON);
+        return  {"users":parsedJSON};
+
+    } catch (error) {
+        console.error('Error:', error.response ? error.response.data : error.message);
+        throw error;
+    }
+    
+}
 async function crawlingPolicies() {
     try {
         const url ="https://www.yongin.go.kr/home/www/www01/www01_09/www01_09_01/www01_09_01_02.jsp;jsessionid=L4SpsGaN7gDxZGKfSIyeJi8Ro7Cj3iP329Ed11xsUFtXGtrxbEbKDkccsvpf1w0B.yonginwas_servlet_engine3"
