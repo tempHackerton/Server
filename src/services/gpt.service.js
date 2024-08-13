@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import OpenAI from "openai";
 import fs from 'fs';
 import csv from 'csv-parser';
-import { recommandPoliciesResponseDTO, recommandsPoliciesResponseDTO, selfIntroduceResponseDTO } from "../dtos/gpt.dtos";
+import { interviewResponseDTO, interviewResultResponseDTO, recommandPoliciesResponseDTO, recommandsPoliciesResponseDTO, selfIntroduceResponseDTO } from "../dtos/gpt.dtos";
 dotenv.config();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -158,4 +158,136 @@ You should respond with a list of relevant policies in the following  only JSON 
 
 }
 
+export const interviewService=async(data)=>{
+    try {
+        const system_prompt = `You are an AI interviewer. You can ask questions based on the given data in the form of json. The given data are as follows.
+{
+"topic" : "cs" //cs or culturefit
+"previous record":[
+{
+"role": "interviewer", // questioner.
+"Content": "Question"
+},
+{
+"role" : "user",
+"content": "answers to questions"
+},
+] // This is a previous conversation record.
+"answer": the answer from the user.
 
+}
+Example:
+{
+"topic" : "cs" ,
+"previous record":[
+{
+"role" : "interviewer",
+"content": "Tell me about node.js"
+},
+{
+"role" : "user",
+"content": "Java script based runtime"
+},
+{
+"role" : "interviewer",
+"content": "Then tell me the difference between node js and spring boot"
+}
+],
+"answer": "Springboot is a Java-based framework and node js is a JavaScript runtime"
+
+
+}
+The data to be given should be given in Korean in the form of json data, based on previous records. At this time, the user's answer should not be evaluated, but new questions should be asked.
+
+{
+"answer": "A tail question, or a new question, related to the answer sent by the user."
+}
+Example:
+{
+"answer": "Aha I see. Then explain the event loop of node js"
+}`;
+            const prompt= JSON.stringify(data);
+            const response = await axios.post(
+                OPENAI_API_URL,
+                {
+                    model: "gpt-3.5-turbo-16k",
+                    messages: [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ]
+                },
+                {
+                    headers: {  
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    }
+                });
+                const generatedText = response.data.choices[0].message.content.trim();
+                console.log(generatedText)
+            // 이스케이프 문자 제거 및 JSON으로 변환
+                const sanitizedString = generatedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // 제어 문자 제거
+                const fixedJSON = fixJSONResponse(sanitizedString);
+                const parsedJSON = JSON.parse(fixedJSON); // JSON 파싱
+            return interviewResponseDTO(parsedJSON);
+
+    } catch (error) {
+        console.error('Error calling ChatGPT API:', error);
+        throw error;
+    }
+}
+
+
+export const interviewrResultService = async(data)=>{
+    try {
+        const system_prompt=`You are an AI interviewer. Based on the given json type of data, you can evaluate the good and bad things about the user's interview. An example of the given data is as follows.
+{
+"record":[
+{
+"role" : "interviewer",
+"content": "question"
+},
+{
+"role" : "user",
+"content": "answer"
+},
+{
+"role" : "interviewer",
+"content": "question"
+},
+{
+"role" :"user",
+"content": "answer"
+} ,
+The data to be given to the user should be provided in Korean in json form as follows.
+{
+"good": "What to praise by looking at the user's interview history",
+"bad": "What to view and feedback on the user's interview history"
+}`
+        const prompt= JSON.stringify(data);
+        const response = await axios.post(
+            OPENAI_API_URL,
+            {
+                model: "gpt-3.5-turbo-16k",
+                messages: [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            {
+                headers: {  
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                }
+            });
+            const generatedText = response.data.choices[0].message.content.trim();
+            console.log(generatedText)
+        // 이스케이프 문자 제거 및 JSON으로 변환
+            const sanitizedString = generatedText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // 제어 문자 제거
+            const fixedJSON = fixJSONResponse(sanitizedString);
+            const parsedJSON = JSON.parse(fixedJSON); // JSON 파싱
+            return interviewResultResponseDTO(parsedJSON);
+    } catch (error) {
+        console.error('Error calling ChatGPT API:', error);
+        throw error;
+    }
+}
