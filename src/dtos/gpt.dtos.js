@@ -28,12 +28,20 @@ export const recommandPoliciesResponseDTO = async (req)=>{
 
 export const interviewResponseDTO = async (req)=>{
     return {
-        "answer":req.answer
+        "answer":req.question
     }
 }
 export const interviewResultResponseDTO = async(req)=>{
     return {
         "good": req.good,
         "bad": req.bad
+    }
+}
+export const interviewRequestDTO = async (req)=>{
+    return{
+        "topic" : req.topic,
+        "major" : req.major,
+        "previousRecord" :req.previousRecord,
+        "answer": req.answer
     }
 }
