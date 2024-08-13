@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 import OpenAI from "openai";
 import fs from 'fs';
 import csv from 'csv-parser';
-import { interviewResponseDTO, interviewResultResponseDTO, recommandPoliciesResponseDTO, recommandsPoliciesResponseDTO, selfIntroduceResponseDTO } from "../dtos/gpt.dtos";
+import cheerio from 'cheerio';
+import { interviewRequestDTO, interviewResponseDTO, interviewResultResponseDTO, recommandPoliciesResponseDTO, recommandsPoliciesResponseDTO, selfIntroduceResponseDTO } from "../dtos/gpt.dtos";
 dotenv.config();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -157,61 +158,64 @@ You should respond with a list of relevant policies in the following  only JSON 
     
 
 }
+const fetchQuestions = async (url) => {
+    try {
+        // 웹페이지의 HTML을 가져오기
+        const  html  = await axios.get(url);
+        console.log(html.data);
+        // Cheerio로 HTML 파싱
+        const $ = cheerio.load(html.data);
 
+        // 텍스트를 저장할 배열
+        const questions = [];
+
+        // box_review 클래스를 가진 div 요소들을 순회
+        $('.box_review').each((index, element) => {
+            // tit_view 클래스의 텍스트 가져오기
+            const titViewText = $(element).find('.tit_view').text().trim();
+
+            // 텍스트가 있으면 배열에 저장
+            if (titViewText) {
+                questions.push(titViewText);
+            }
+        });
+
+        return questions;
+
+    } catch (error) {
+        
+        return [
+            "기존에 어떤 업무를 했는지",
+            "왜 우리가 당신을 다른 시니어들도 있는데 뽑아야하냐 경쟁력이 뭐라고 생각하냐",
+            "왜 운영업무 말고 기획업무를 선택했냐"
+        ];
+    }
+};
 export const interviewService=async(data)=>{
     try {
-        const system_prompt = `You are an AI interviewer. You can ask questions based on the given data in the form of json. The given data are as follows.
-{
-"topic" : "cs" //cs or culturefit
-"previous record":[
-{
-"role": "interviewer", // questioner.
-"Content": "Question"
-},
-{
-"role" : "user",
-"content": "answers to questions"
-},
-] // This is a previous conversation record.
-"answer": the answer from the user.
+        if(data.previousRecord==null || data.previousRecord==undefined){
+            return {answer:data.questions[0]};
+        }
+        
+        const system_prompt = ` You are an AI interviewer. Your task is to generate interview questions based on the given JSON data, which includes a topic, a list of questions, the user's major, previous conversation records, and the user's last answer.
 
-}
-Example:
-{
-"topic" : "cs" ,
-"previous record":[
-{
-"role" : "interviewer",
-"content": "Tell me about node.js"
-},
-{
-"role" : "user",
-"content": "Java script based runtime"
-},
-{
-"role" : "interviewer",
-"content": "Then tell me the difference between node js and spring boot"
-}
-],
-"answer": "Springboot is a Java-based framework and node js is a JavaScript runtime"
+        Instructions:
+        - If there is no previous record, generate the first interview question based on the 'topic' and 'questions' array provided. Select the most relevant question from the 'questions' array that aligns with the 'topic'.
+        - If there is a previous record, either ask a follow-up question (tail question) related to the user's last answer or, if the follow-up is not relevant, move to the next question from the 'questions' array.
+        - Ensure that the generated question is in Korean and directly related to the 'topic' and the context provided by the 'questions' array.
 
-
-}
-The data to be given should be given in Korean in the form of json data, based on previous records. At this time, the user's answer should not be evaluated, but new questions should be asked.
-
-{
-"answer": "A tail question, or a new question, related to the answer sent by the user."
-}
-Example:
-{
-"answer": "Aha I see. Then explain the event loop of node js"
-}`;
-            const prompt= JSON.stringify(data);
+        The response should be in JSON format with the following structure:
+        {
+            "question": "The next question or a follow-up question based on the user's last answer."
+        }
+`;
+            const prompt= JSON.stringify(interviewRequestDTO(data));
             const response = await axios.post(
                 OPENAI_API_URL,
                 {
                     model: "gpt-3.5-turbo-16k",
                     messages: [
+                        
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ]
@@ -239,6 +243,7 @@ Example:
 
 export const interviewrResultService = async(data)=>{
     try {
+        
         const system_prompt=`You are an AI interviewer. Based on the given json type of data, you can evaluate the good and bad things about the user's interview. An example of the given data is as follows.
 {
 "record":[
@@ -290,4 +295,11 @@ The data to be given to the user should be provided in Korean in json form as fo
         console.error('Error calling ChatGPT API:', error);
         throw error;
     }
+}
+
+export const questionService = async(req)=>{
+    const url = 'https://www.saramin.co.kr/zf_user/interview-review?my=0&page=1&csn=&group_cd=&orderby=registration&career_cd=&job_category=&company_nm=';
+    const questions= await fetchQuestions(url);
+
+    return questions;
 }

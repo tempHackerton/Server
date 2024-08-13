@@ -1,5 +1,5 @@
 import express from "express";
-import { selfIntroduceController,recommandPoliciesController, interviewrController, interviewResultController } from "../controllers/gpt.controller";
+import { selfIntroduceController,recommandPoliciesController, interviewrController, interviewResultController, questionController } from "../controllers/gpt.controller";
 
 export const gptRoute=express.Router();
 
@@ -17,4 +17,7 @@ gptRoute.post('/interview',async(req,res)=>{
 
 gptRoute.post('/interview/result',async(req,res)=>{
     const result =await interviewResultController(req,res);
+})
+gptRoute.get('/question',async(req,res)=>{
+    const result = await questionController(req,res);
 })
