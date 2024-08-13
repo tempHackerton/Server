@@ -20,6 +20,32 @@
           </div>
     </div>
 
+## Collaborator
+### 팀장 장준용
+
+ [jainefer](https://github.com/jainefer)
+ 
+ **백엔드** , **모델링** ,**서버**, **디자인** 
+
+ ### 팀원 권상훈
+
+ [sunsetdust](https://github.com/sunsetdust)
+
+ **프론트엔드** , **기획** 
+
+ ### 팀원 김원철
+
+ [1FE](https://github.com/dnjscjf0829)
+
+ **프론트엔드** ,**기획**
+
+ ### 팀원 남병준
+
+ [hardNormalEasyMode](https://github.com/dlrtmxmflaqudwnsdl)
+ 
+ **백엔드**, **기획** , **디자인**
+
+
 ## 💡 Features
 
 ### 📌 메인 화면
