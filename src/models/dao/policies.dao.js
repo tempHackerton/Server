@@ -24,6 +24,7 @@ export const sendAlarmDao=async(data,user)=>{
 }
 
 export const readAlarmDao = async(data,user)=>{
+    console.log("읽은 알림: ",data);
     const conn = await pool.getConnection();
     const readAlarmDao = await pool.query('update Alarm set is_read = 1 where id=?;',[data]);
     conn.release();
